@@ -25,6 +25,7 @@ class ModelHandler(object):
         self._batch_size = 0
         self.initialized = False
         self.mod = None
+
     def initialize(self, context):
         """
         Initialize model. This will be called during model loading time
@@ -48,14 +49,15 @@ class ModelHandler(object):
 
     def preprocess(self, batch):
         """
-                Transform raw input into model input data.
-                :param batch: list of raw requests, should match batch size
-                :return: list of preprocessed model input data
-                """
+        Transform raw input into model input data.
+        :param batch: list of raw requests, should match batch size
+        :return: list of preprocessed model input data
+        """
         assert self._batch_size == len(batch), "Invalid input batch size: {}".format(len(batch))
-        with open('tmp_file', 'wb') as f:
-            f.write(batch[0].get('body'))
-        return mx.nd.array(data_transformer.file_to_vec('tmp_file', file_vector_size=defs.file_chars_trunc_limit))
+        #with open('tmp_file','wb') as f:
+        #     f.write(batch[0].get('body'))
+        #return mx.nd.array(data_transformer.file_to_vec('tmp_file', file_vector_size=defs.file_chars_trunc_limit))
+        return mx.nd.array(data_transformer.file_to_vec(batch[0].get('body'), file_vector_size=defs.file_chars_trunc_limit))
 
     def inference(self, model_input):
         """
@@ -85,14 +87,16 @@ class ModelHandler(object):
         :param context: model server context
         :return: list of outputs to be send back to client
         """
+
         try:
             data = self.preprocess(data)
             data = self.inference(data)
             data = self.postprocess(data)
-            print(data)
+            print("after", data)
             return data
         except Exception as e:
             logging.error(e, exc_info=True)
             request_processor = context.request_processor
             request_processor.report_status(500, "Unknown inference error")
             return [str(e)] * self._batch_size
+
